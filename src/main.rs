@@ -10,6 +10,8 @@ use postgres::{NoTls, types::ToSql};
 use serde_json::Value;
 use tokio::time::sleep;
 use tokio_postgres::Config;
+use serde::Deserialize;
+use config::File;
 
 // This struct will be used to share the SQLite connection across handlers
 struct AppState {
@@ -18,8 +20,21 @@ struct AppState {
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
+    // Read configuration
+    let config = config::Config::builder()
+        .add_source(File::with_name("config.toml"))
+        .build()
+        .unwrap();
+    
+    let db_config: DatabaseConfig = match config.try_deserialize() {
+        Ok(r) => r,
+        Err(e) => { 
+            panic!("Invalid configuration: {:#?}", e);
+        }
+    };
+    
     // Initialize the DB and set up shared state
-    let data = match init_db_psql("localhost", "postgres", "password", "webhooks").await {
+    let data = match init_db_psql(&db_config.host, &db_config.user, &db_config.password, &db_config.dbname).await {
         Ok(db) => web::Data::new(AppState { db }),
         Err(_) => panic!("Error occurred on DB creation"),
     };
@@ -251,4 +266,12 @@ where
             }
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct DatabaseConfig {
+    host: String,
+    user: String,
+    password: String,
+    dbname: String,
 }
