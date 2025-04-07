@@ -48,7 +48,7 @@ async fn main() -> std::io::Result<()> {
             .route("/missing_webhooks", web::get().to(get_missing))
     })
     .client_request_timeout(std::time::Duration::from_secs(60))
-    .bind("127.0.0.1:8080")?
+    .bind("0.0.0.0:8080")?
     .run()
     .await
 }
